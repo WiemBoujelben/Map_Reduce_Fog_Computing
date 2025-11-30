@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Analyse de Sentiments</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .sentiment-positive { background: linear-gradient(135deg, #10B981, #059669); }
+        .sentiment-negative { background: linear-gradient(135deg, #EF4444, #DC2626); }
+        .sentiment-neutral { background: linear-gradient(135deg, #6B7280, #4B5563); }
+        .pulse-animation {
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <!-- Header -->
+    <header class="bg-white shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center py-4">
+                <div class="flex items-center">
+                    <i class="fas fa-chart-bar text-2xl text-blue-600 mr-3"></i>
+                    <h1 class="text-2xl font-bold text-gray-900">Dashboard Analyse de Sentiments</h1>
+                </div>
+                <div class="flex items-center space-x-4">
+                    {% if server_healthy %}
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
+                        <i class="fas fa-check-circle mr-2"></i>
+                        Serveur Connecté
+                    </span>
+                    {% else %}
+                    <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-800">
+                        <i class="fas fa-exclamation-triangle mr-2"></i>
+                        Serveur Déconnecté
+                    </span>
+                    {% endif %}
+                    
+                    {% if data_stats %}
+                    <span class="text-sm text-gray-600">
+                        {{ data_stats.total_comments }} commentaires chargés
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Controls Section -->
+        <div class="bg-white rounded-lg shadow-sm p-6 mb-8">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h2 class="text-lg font-semibold text-gray-900">Contrôles d'Analyse</h2>
+                    <p class="text-sm text-gray-600">Lancez l'analyse MapReduce distribuée</p>
+                </div>
+                <div class="flex space-x-4">
+                    {% if processing %}
+                    <button class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-yellow-500 pulse-animation" disabled>
+                        <i class="fas fa-spinner fa-spin mr-2"></i>
+                        Analyse en cours...
+                    </button>
+                    {% else %}
+                    <button onclick="launchAnalysis()" class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
+                        <i class="fas fa-play mr-2"></i>
+                        Lancer l'Analyse
+                    </button>
+                    {% endif %}
+                    
+                    {% if results %}
+                    <button onclick="clearResults()" class="inline-flex items-center px-6 py-3 border border-gray-300 text-base font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50">
+                        <i class="fas fa-trash mr-2"></i>
+                        Effacer les Résultats
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Processing Indicator -->
+        {% if processing %}
+        <div id="processing-indicator" class="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-8">
+            <div class="flex items-center">
+                <i class="fas fa-sync-alt fa-spin text-yellow-600 mr-3"></i>
+                <div>
+                    <h3 class="text-sm font-medium text-yellow-800">Analyse en cours</h3>
+                    <p class="text-sm text-yellow-700">Le traitement MapReduce est en cours d'exécution sur les 3 machines...</p>
+                </div>
+            </div>
+            <div class="mt-4">
+                <div class="flex space-x-2">
+                    <div class="flex-1 bg-yellow-200 rounded-full h-2">
+                        <div class="bg-yellow-600 h-2 rounded-full pulse-animation" style="width: 70%"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Error Display -->
+        {% if results and results.error %}
+        <div class="bg-red-50 border border-red-200 rounded-lg p-4 mb-8">
+            <div class="flex items-center">
+                <i class="fas fa-exclamation-triangle text-red-600 mr-3"></i>
+                <div>
+                    <h3 class="text-sm font-medium text-red-800">Erreur lors de l'analyse</h3>
+                    <p class="text-sm text-red-700">{{ results.error }}</p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Results Section -->
+        {% if results and not results.error and summary %}
+        <div class="space-y-8">
+            <!-- Summary Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                <div class="bg-white rounded-lg shadow-sm p-6">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-comments text-2xl text-blue-600"></i>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-gray-600">Total Commentaires</p>
+                            <p class="text-2xl font-semibold text-gray-900">{{ summary.total_comments }}</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-lg shadow-sm p-6">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-clock text-2xl text-green-600"></i>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-gray-600">Temps de Traitement</p>
+                            <p class="text-2xl font-semibold text-gray-900">{{ "%.2f"|format(summary.processing_time) }}s</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-lg shadow-sm p-6">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-network-wired text-2xl text-purple-600"></i>
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-gray-600">Mode de Traitement</p>
+                            <p class="text-lg font-semibold text-gray-900">
+                                {% if summary.distributed %}
+                                <span class="text-green-600">Distribué</span>
+                                {% else %}
+                                <span class="text-yellow-600">Local</span>
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white rounded-lg shadow-sm p-6 sentiment-{{ summary.overall_sentiment }}">
+                    <div class="flex items-center">
+                        <div class="flex-shrink-0 text-white text-2xl">
+                            {{ get_sentiment_emoji(summary.overall_sentiment) }}
+                        </div>
+                        <div class="ml-4">
+                            <p class="text-sm font-medium text-white">Sentiment Global</p>
+                            <p class="text-2xl font-semibold text-white capitalize">{{ summary.overall_sentiment }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts Section -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <!-- Sentiment Chart -->
+                {% if charts.sentiment %}
+                <div class="bg-white rounded-lg shadow-sm p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Distribution des Sentiments</h3>
+                    <img src="{{ charts.sentiment }}" alt="Distribution des Sentiments" class="w-full h-auto">
+                </div>
+                {% endif %}
+
+                <!-- Platform Chart -->
+                {% if charts.platform %}
+                <div class="bg-white rounded-lg shadow-sm p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Répartition par Plateforme</h3>
+                    <img src="{{ charts.platform }}" alt="Répartition par Plateforme" class="w-full h-auto">
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Keywords Chart -->
+            {% if charts.keywords %}
+            <div class="bg-white rounded-lg shadow-sm p-6">
+                <h3 class="text-lg font-semibold text-gray-900 mb-4">Top 10 des Mots-Clés Mentionnés</h3>
+                <img src="{{ charts.keywords }}" alt="Top 10 des Mots-Clés" class="w-full h-auto">
+            </div>
+            {% endif %}
+
+            <!-- Detailed Results -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Sentiment Details -->
+                <div class="bg-white rounded-lg shadow-sm p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Détails des Sentiments</h3>
+                    <div class="space-y-3">
+                        {% for sentiment, percentage in results.analysis.sentiment_distribution.items() %}
+                        <div class="flex justify-between items-center">
+                            <span class="flex items-center text-sm font-medium text-gray-700">
+                                <span class="text-lg mr-2">{{ get_sentiment_emoji(sentiment) }}</span>
+                                {{ sentiment|capitalize }}
+                            </span>
+                            <span class="text-sm font-semibold {{ 'text-green-600' if sentiment == 'positive' else 'text-red-600' if sentiment == 'negative' else 'text-gray-600' }}">
+                                {{ "%.1f"|format(percentage) }}%
+                            </span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Platform Details -->
+                <div class="bg-white rounded-lg shadow-sm p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Détails par Plateforme</h3>
+                    <div class="space-y-3">
+                        {% for platform, count in results.analysis.platform_distribution.items() %}
+                        <div class="flex justify-between items-center">
+                            <span class="flex items-center text-sm font-medium text-gray-700">
+                                <span class="text-lg mr-2">{{ get_platform_icon(platform) }}</span>
+                                {{ platform|capitalize }}
+                            </span>
+                            <span class="text-sm font-semibold text-blue-600">{{ count }} comments</span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Top Keywords -->
+                <div class="bg-white rounded-lg shadow-sm p-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-4">Mots-Clés les Plus Mentionnés</h3>
+                    <div class="space-y-2">
+                        {% for keyword, count in results.analysis.top_keywords.items() %}
+                        <div class="flex justify-between items-center">
+                            <span class="text-sm font-medium text-gray-700">#{{ keyword }}</span>
+                            <span class="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                                {{ count }} mentions
+                            </span>
+                        </div>
+                        {% else %}
+                        <p class="text-sm text-gray-500 text-center">Aucun mot-clé significatif détecté</p>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% elif not processing %}
+        <!-- Empty State -->
+        <div class="bg-white rounded-lg shadow-sm p-12 text-center">
+            <i class="fas fa-chart-bar text-6xl text-gray-300 mb-4"></i>
+            <h3 class="text-lg font-medium text-gray-900 mb-2">Aucune analyse effectuée</h3>
+            <p class="text-gray-500 mb-6">Lancez une analyse pour visualiser les résultats</p>
+            <button onclick="launchAnalysis()" class="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700">
+                <i class="fas fa-play mr-2"></i>
+                Lancer la Première Analyse
+            </button>
+        </div>
+        {% endif %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white border-t border-gray-200 mt-12">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
+            <div class="flex justify-between items-center">
+                <p class="text-sm text-gray-600">Système d'Analyse de Sentiments - Fog Computing avec MapReduce</p>
+                <div class="flex space-x-4">
+                    <button onclick="testConnection()" class="text-sm text-blue-600 hover:text-blue-500">
+                        <i class="fas fa-wifi mr-1"></i>
+                        Tester la connexion
+                    </button>
+                    <button onclick="refreshStatus()" class="text-sm text-green-600 hover:text-green-500">
+                        <i class="fas fa-sync-alt mr-1"></i>
+                        Actualiser
+                    </button>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script>
+        function launchAnalysis() {
+            fetch('/analyze', { method: 'POST' })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        alert('Erreur: ' + data.error);
+                    } else {
+                        // Rediriger vers la page principale
+                        window.location.href = '/';
+                    }
+                })
+                .catch(error => {
+                    alert('Erreur: ' + error);
+                });
+        }
+
+        function clearResults() {
+            window.location.href = '/clear';
+        }
+
+        function testConnection() {
+            fetch('/test_connection')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.connected) {
+                        alert('✅ Connexion au serveur principal réussie !');
+                    } else {
+                        alert('❌ Erreur de connexion: ' + data.error);
+                    }
+                });
+        }
+
+        function refreshStatus() {
+            window.location.reload();
+        }
+
+        // Auto-refresh si une analyse est en cours
+        {% if processing %}
+        setTimeout(() => {
+            window.location.reload();
+        }, 3000);
+        {% endif %}
+    </script>
+</body>
+</html>
