@@ -8,11 +8,9 @@ from collections import Counter
 app = Flask(__name__)
 CORS(app)
 
-# ⚠️ REMPLACEZ CES IP PAR LES VOTRES ⚠️
 NODE_2_URL = "http://10.250.196.36:5001"  # Machine 2 - Twitter
 NODE_3_URL = "http://10.250.196.154:5002"  # Machine 3 - Facebook
 
-# Listes de mots pour l'analyse de sentiment
 POSITIVE_WORDS = {
     'bon', 'excellent', 'génial', 'super', 'aimer', 'adorer', 'parfait', 'fantastique',
     'heureux', 'content', 'satisfait', 'recommande', 'exceptionnel', 'professionnel',
@@ -60,7 +58,6 @@ def map_sentiment_analysis(comments_chunk):
     for comment in comments_chunk:
         text = comment['text'].lower()
         
-        # Analyse de sentiment basique
         positive_score = sum(1 for word in POSITIVE_WORDS if word in text)
         negative_score = sum(1 for word in NEGATIVE_WORDS if word in text)
         
@@ -74,7 +71,6 @@ def map_sentiment_analysis(comments_chunk):
         sentiment_count[sentiment] += 1
         platform_stats[comment['platform']] += 1
         
-        # Compter les mentions de mots-clés importants
         keywords = ['produit', 'service', 'client', 'livraison', 'qualité', 'prix', 'commande']
         for keyword in keywords:
             if keyword in text:
@@ -100,12 +96,10 @@ def reduce_sentiment_analysis(results):
         global_platforms.update(result['platform_stats'])
         global_keywords.update(result['keyword_mentions'])
     
-    # Calcul des pourcentages
     sentiment_percentages = {}
     for sentiment, count in global_sentiments.items():
         sentiment_percentages[sentiment] = round((count / total_comments) * 100, 2)
     
-    # Sentiment global dominant
     overall_sentiment = global_sentiments.most_common(1)[0][0] if global_sentiments else 'neutral'
     
     return {
@@ -125,7 +119,6 @@ def send_to_machine(url, data):
         return response.json()
     except requests.exceptions.RequestException as e:
         print(f"❌ Erreur avec {url}: {e}")
-        # Fallback: traiter localement
         print("🔄 Traitement local en fallback...")
         return map_sentiment_analysis(data)
 
@@ -134,7 +127,6 @@ def analyze_sentiments():
     """Endpoint principal pour lancer l'analyse"""
     start_time = time.time()
     
-    # Charger les commentaires
     all_comments = load_comments()
     
     if not all_comments:
@@ -142,7 +134,6 @@ def analyze_sentiments():
     
     print(f"📊 Analyse de {len(all_comments)} commentaires...")
     
-    # Division des commentaires par plateforme
     twitter_comments, facebook_comments, instagram_comments = divide_comments_by_platform(all_comments)
     
     print(f"🔀 Répartition:")
@@ -150,22 +141,17 @@ def analyze_sentiments():
     print(f"   Facebook: {len(facebook_comments)} commentaires") 
     print(f"   Instagram: {len(instagram_comments)} commentaires")
     
-    # Traitement distribué
     print("🚀 Lancement du traitement MapReduce...")
     
-    # Nœud 1 traite Instagram (local)
     local_result = map_sentiment_analysis(instagram_comments)
     print("✅ Nœud 1 (Instagram) terminé")
     
-    # Nœud 2 traite Twitter (distant)
     twitter_result = send_to_machine(NODE_2_URL, twitter_comments)
     print("✅ Nœud 2 (Twitter) terminé")
     
-    # Nœud 3 traite Facebook (distant)  
     facebook_result = send_to_machine(NODE_3_URL, facebook_comments)
     print("✅ Nœud 3 (Facebook) terminé")
     
-    # Fusion des résultats
     print("🔄 Fusion des résultats...")
     final_analysis = reduce_sentiment_analysis([local_result, twitter_result, facebook_result])
     

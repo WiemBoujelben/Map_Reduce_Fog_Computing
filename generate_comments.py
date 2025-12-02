@@ -1,7 +1,6 @@
 import json
 import random
 
-# Listes de mots pour générer des commentaires réalistes
 positive_phrases = [
     "J adore ce produit ! Excellent qualité",
     "Super satisfaction, je recommande vivement", 
@@ -68,7 +67,6 @@ def generate_comments(num_comments=1000):
     
     return comments
 
-# Générer et sauvegarder les commentaires
 comments = generate_comments(1000000)
 data = {"comments": comments}
 

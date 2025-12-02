@@ -10,10 +10,8 @@ import threading
 
 app = Flask(__name__)
 
-# Configuration du serveur principal
 MAIN_SERVER_URL = "http://localhost:5000"
 
-# Variables globales pour stocker les résultats
 analysis_results = None
 processing = False
 
@@ -21,14 +19,13 @@ def create_sentiment_chart(sentiment_distribution):
     """Crée un graphique camembert pour les sentiments"""
     labels = list(sentiment_distribution.keys())
     sizes = list(sentiment_distribution.values())
-    colors = ['#ff9999', '#66b3ff', '#99ff99']  # rouge, bleu, vert
+    colors = ['#ff9999', '#66b3ff', '#99ff99']  
     
     plt.figure(figsize=(8, 6))
     plt.pie(sizes, labels=labels, colors=colors[:len(labels)], autopct='%1.1f%%', startangle=90)
     plt.axis('equal')
     plt.title('Distribution des Sentiments')
     
-    # Convertir en image base64
     img = io.BytesIO()
     plt.savefig(img, format='png', bbox_inches='tight')
     img.seek(0)
@@ -49,7 +46,6 @@ def create_platform_chart(platform_distribution):
     plt.xlabel('Plateformes')
     plt.ylabel('Nombre de commentaires')
     
-    # Ajouter les valeurs sur les barres
     for bar, count in zip(bars, counts):
         plt.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.1, 
                 str(count), ha='center', va='bottom')
@@ -67,7 +63,7 @@ def create_keywords_chart(top_keywords):
     if not top_keywords:
         return None
         
-    keywords = list(top_keywords.keys())[:10]  # Top 10 seulement
+    keywords = list(top_keywords.keys())[:10]  
     counts = list(top_keywords.values())[:10]
     
     plt.figure(figsize=(10, 8))
@@ -75,12 +71,11 @@ def create_keywords_chart(top_keywords):
     plt.title('Top 10 des Mots-Clés Mentionnés')
     plt.xlabel('Nombre de mentions')
     
-    # Ajouter les valeurs sur les barres
     for bar, count in zip(bars, counts):
         plt.text(bar.get_width() + 0.1, bar.get_y() + bar.get_height()/2, 
                 str(count), ha='left', va='center')
     
-    plt.gca().invert_yaxis()  # Afficher le plus grand en haut
+    plt.gca().invert_yaxis()  
     img = io.BytesIO()
     plt.savefig(img, format='png', bbox_inches='tight')
     img.seek(0)
@@ -133,14 +128,12 @@ def index():
     """Page principale du dashboard"""
     global analysis_results, processing
     
-    # Vérifier la connexion au serveur principal
     try:
         health_response = requests.get(f"{MAIN_SERVER_URL}/health", timeout=5)
         server_healthy = health_response.status_code == 200
     except:
         server_healthy = False
     
-    # Récupérer les statistiques des données
     try:
         stats_response = requests.get(f"{MAIN_SERVER_URL}/api/stats", timeout=5)
         if stats_response.status_code == 200:
@@ -150,19 +143,16 @@ def index():
     except:
         data_stats = None
     
-    # Préparer les données pour le template
     charts = {}
     summary = {}
     
     if analysis_results and 'analysis' in analysis_results:
         analysis_data = analysis_results['analysis']
         
-        # Créer les graphiques
         charts['sentiment'] = create_sentiment_chart(analysis_data.get('sentiment_distribution', {}))
         charts['platform'] = create_platform_chart(analysis_data.get('platform_distribution', {}))
         charts['keywords'] = create_keywords_chart(analysis_data.get('top_keywords', {}))
         
-        # Préparer le résumé
         summary = {
             'total_comments': analysis_data.get('total_comments_analyzed', 0),
             'overall_sentiment': analysis_data.get('overall_sentiment', 'unknown'),
@@ -190,7 +180,6 @@ def analyze():
     
     processing = True
     
-    # Lancer l'analyse dans un thread séparé
     thread = threading.Thread(target=launch_analysis_thread)
     thread.daemon = True
     thread.start()
