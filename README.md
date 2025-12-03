@@ -1,11 +1,14 @@
-A distributed sentiment analysis system using Fog Computing architecture and MapReduce paradigm to process social media comments from Twitter, Facebook, and Instagram in parallel across 3 nodes.
- ###🎯 Objectives
+# Distributed Sentiment Analysis using Fog Computing + MapReduce
 
-Simulate Fog Computing architecture with 3 nodes (1 master, 2 slaves)
+## 📌 Project Description
+A distributed sentiment analysis system using a Fog Computing architecture and the MapReduce paradigm to process social media comments from **Twitter, Facebook, and Instagram** in parallel across **3 nodes**.
 
-Implement MapReduce for distributed sentiment analysis
+## 🎯 Objectives
+- Simulate Fog Computing architecture with **3 nodes**  
+  ✔ 1 Master node  
+  ✔ 2 Slave/Fog nodes  
+- Implement **MapReduce** for distributed sentiment analysis  
+- Analyze **positive/negative sentiment ratios** for each platform  
+- Reduce latency by processing data **closer to the data source**  
 
-Analyze positive/negative sentiment ratios for each platform
-
-Reduce latency by processing data closer to its source
 
